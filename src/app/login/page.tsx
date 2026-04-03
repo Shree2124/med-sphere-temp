@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/authStore';
 import {
   Lock,
   Mail,
@@ -17,6 +18,7 @@ import Swal from 'sweetalert2';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setUser } = useAuthStore();
   const [isMounted, setIsMounted] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -107,8 +109,8 @@ export default function LoginPage() {
         iconColor: '#10b981',
       });
 
+      setUser(data.user, data.user.role);
       router.push('/dashboard');
-      router.refresh();
     } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
@@ -264,11 +266,10 @@ export default function LoginPage() {
                             type="button"
                             onClick={() => setRole(r)}
                             disabled={isLoading}
-                            className={`py-2 px-3 rounded-lg text-xs font-medium border transition-all cursor-pointer capitalize font-inter ${
-                              role === r
-                                ? 'bg-brand-50 border-brand-500 text-brand-700'
-                                : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                            } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`py-2 px-3 rounded-lg text-xs font-medium border transition-all cursor-pointer capitalize font-inter ${role === r
+                              ? 'bg-brand-50 border-brand-500 text-brand-700'
+                              : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                              } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             {r}
                           </button>
@@ -319,9 +320,8 @@ export default function LoginPage() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           disabled={isLoading}
-                          className={`w-full pl-10 pr-10 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all font-inter ${
-                            error ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                          className={`w-full pl-10 pr-10 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all font-inter ${error ? 'border-red-500' : 'border-gray-300'
+                            }`}
                           placeholder="Enter your password"
                           required
                         />
@@ -427,11 +427,10 @@ export default function LoginPage() {
                             type="button"
                             onClick={() => setRegRole(r)}
                             disabled={isLoading}
-                            className={`py-2 px-3 rounded-lg text-xs font-medium border transition-all cursor-pointer capitalize font-inter ${
-                              regRole === r
-                                ? 'bg-brand-50 border-brand-500 text-brand-700'
-                                : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                            }`}
+                            className={`py-2 px-3 rounded-lg text-xs font-medium border transition-all cursor-pointer capitalize font-inter ${regRole === r
+                              ? 'bg-brand-50 border-brand-500 text-brand-700'
+                              : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                              }`}
                           >
                             {r}
                           </button>
@@ -482,11 +481,10 @@ export default function LoginPage() {
                           value={regEmail}
                           onChange={(e) => setRegEmail(e.target.value)}
                           disabled={isLoading}
-                          className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all font-inter ${
-                            regError?.includes('Email')
-                              ? 'border-red-500'
-                              : 'border-gray-300'
-                          }`}
+                          className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all font-inter ${regError?.includes('Email')
+                            ? 'border-red-500'
+                            : 'border-gray-300'
+                            }`}
                           placeholder="patient@medsphere.com"
                           required
                         />
@@ -536,11 +534,10 @@ export default function LoginPage() {
                             value={regConfirmPass}
                             onChange={(e) => setRegConfirmPass(e.target.value)}
                             disabled={isLoading}
-                            className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all font-inter ${
-                              regError?.includes('match')
-                                ? 'border-red-500'
-                                : 'border-gray-300'
-                            }`}
+                            className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all font-inter ${regError?.includes('match')
+                              ? 'border-red-500'
+                              : 'border-gray-300'
+                              }`}
                             placeholder="••••••••"
                             required
                           />

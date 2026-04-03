@@ -1,56 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { decrypt } from './lib/auth';
+import { getSessionFromRequest } from '@/lib/auth';
+import { can, Permission } from '@/lib/rbac';
+import { Role } from '@/generated/prisma/client';
+
+// Map routes to the permissions required to access them
+const ROUTE_PERMISSIONS: Record<string, Permission> = {
+  '/dashboard/users': 'manage_users',
+  '/dashboard/patients': 'view_patients',
+  '/dashboard/appointments': 'view_appointments',
+  '/dashboard/billing': 'view_billing',
+  '/dashboard/inventory': 'view_inventory',
+  '/dashboard/reports': 'view_reports',
+};
 
 export async function proxy(req: NextRequest) {
-  const path = req.nextUrl.pathname;
-  const isDashboardRoute = path.startsWith('/dashboard');
-  const isLoginRoute = path === '/login';
+  const { pathname } = req.nextUrl;
 
-  const token = req.cookies.get('token')?.value;
+  // Allow login page and public assets
+  if (pathname.startsWith('/login')) {
+    return NextResponse.next();
+  }
 
-  // 1. If trying to access dashboard and no token, redirect to login
-  // if (isDashboardRoute && !token) {
-  //   return NextResponse.redirect(new URL('/login', req.url));
-  // }
+  const session = await getSessionFromRequest(req);
 
-  // 2. If trying to access login and have valid token, redirect to dashboard
-  // if (isLoginRoute && token) {
-  //   try {
-  //     await decrypt(token);
-  //     return NextResponse.redirect(new URL('/dashboard', req.url));
-  //   } catch {
-  //     // Invalid token, delete it
-  //     const res = NextResponse.next();
-  //     res.cookies.delete('token');
-  //     return res;
-  //   }
-  // }
+  // If no session, redirect to login
+  if (!session) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/login';
+    return NextResponse.redirect(url);
+  }
 
-  // 3. Attach payload to headers for protected routes
-  // if (isDashboardRoute && token) {
-  //   try {
-  //     const payload = await decrypt(token);
-  //     const requestHeaders = new Headers(req.headers);
-  //     requestHeaders.set('x-user-id', payload.sub as string);
-  //     requestHeaders.set('x-user-role', payload.role as string);
-  //     requestHeaders.set('x-user-name', payload.name as string);
+  // Find the required permission for the current route
+  const requiredPermission = Object.entries(ROUTE_PERMISSIONS).find(([route]) =>
+    pathname.startsWith(route)
+  )?.[1];
 
-  //     return NextResponse.next({
-  //       request: {
-  //         headers: requestHeaders,
-  //       },
-  //     });
-  //   } catch {
-  //     // Invalid token, redirect to login
-  //     const res = NextResponse.redirect(new URL('/login', req.url));
-  //     res.cookies.delete('token');
-  //     return res;
-  //   }
-  // }
+  // If the route requires a permission, check if the user has it
+  if (requiredPermission) {
+    const userRole = session.role as Role;
+    if (!can(userRole, requiredPermission)) {
+      // If user doesn't have permission, redirect to the main dashboard
+      const url = req.nextUrl.clone();
+      url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
+  }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/api/dashboard/:path*'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores';
 import {
   Bell,
   Search,
@@ -12,9 +14,22 @@ import {
 import { alerts as alertsData } from '@/lib/mock-data';
 
 export function TopBar() {
+  const router = useRouter();
+  const { user, role, clearAuth } = useAuthStore();
   const [showNotifs, setShowNotifs] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const unreadCount = alertsData.filter((a) => !a.read).length;
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout failed', error);
+    } finally {
+      clearAuth();
+      router.push('/login');
+    }
+  };
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-gray-100">
@@ -71,13 +86,12 @@ export function TopBar() {
                     >
                       <div className="flex items-start gap-2">
                         <div
-                          className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
-                            alert.priority === 'high'
-                              ? 'bg-red-500'
-                              : alert.priority === 'medium'
-                                ? 'bg-amber-500'
-                                : 'bg-gray-300'
-                          }`}
+                          className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${alert.priority === 'high'
+                            ? 'bg-red-500'
+                            : alert.priority === 'medium'
+                              ? 'bg-amber-500'
+                              : 'bg-gray-300'
+                            }`}
                         />
                         <div className="min-w-0">
                           <p className="text-xs font-medium text-gray-500">
@@ -117,13 +131,15 @@ export function TopBar() {
               id="profile-toggle"
             >
               <div className="w-8 h-8 rounded-full bg-linear-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-bold">
-                A
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
               <div className="hidden sm:block text-left">
                 <p className="text-sm font-medium text-gray-700 leading-tight">
-                  Admin
+                  {user?.name || 'User'}
                 </p>
-                <p className="text-[10px] text-gray-400">Super Admin</p>
+                <p className="text-[10px] text-gray-400 capitalize">
+                  {role?.toLowerCase().replace('_', ' ') || 'Role'}
+                </p>
               </div>
               <ChevronDown
                 size={14}
@@ -141,7 +157,10 @@ export function TopBar() {
                     <Settings size={16} /> Settings
                   </button>
                   <div className="border-t border-gray-100 my-1" />
-                  <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  >
                     <LogOut size={16} /> Logout
                   </button>
                 </div>
