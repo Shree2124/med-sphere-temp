@@ -14,6 +14,11 @@ const loginSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    console.log('[AUTH_DEBUG][login] request-received', {
+      email: body?.email,
+      role: body?.role,
+      rememberMe: body?.rememberMe,
+    });
     const validated = loginSchema.safeParse(body);
 
     if (!validated.success) {
@@ -31,7 +36,10 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findUnique({
       where: { email },
     });
-    console.log(user)
+    console.log('[AUTH_DEBUG][login] user-lookup', {
+      email,
+      found: Boolean(user),
+    });
 
     if (!user) {
       return NextResponse.json(
@@ -42,16 +50,23 @@ export async function POST(req: NextRequest) {
 
     // Role check
     if (user.role.toLowerCase() !== role.toLowerCase()) {
+      console.log('[AUTH_DEBUG][login] role-mismatch', {
+        email,
+        requestedRole: role,
+        actualRole: user.role,
+      });
       return NextResponse.json(
         { message: 'Unauthorized role access' },
         { status: 403 }
       );
     }
 
-    // Password check
-    // const isPasswordValid = await bcrypt.compare(password, user.password);
-    const isPasswordValid = (password === user.password);
+    const isBcryptHash = /^\$2[aby]\$\d{2}\$/.test(user.password);
+    const isPasswordValid = isBcryptHash
+      ? await bcrypt.compare(password, user.password)
+      : password === user.password;
     if (!isPasswordValid) {
+      console.log('[AUTH_DEBUG][login] invalid-password', { email });
       return NextResponse.json(
         { message: 'Invalid email or password' },
         { status: 401 }
@@ -86,9 +101,18 @@ export async function POST(req: NextRequest) {
     response.cookies.set('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       expires,
       path: '/',
+    });
+
+    console.log('[AUTH_DEBUG][login] success-cookie-set', {
+      userId: user.id,
+      role: user.role,
+      tokenLength: token.length,
+      expiresAt: expires.toISOString(),
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
     });
 
     return response;

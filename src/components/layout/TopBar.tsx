@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores';
 import {
@@ -15,10 +15,14 @@ import { alerts as alertsData } from '@/lib/mock-data';
 
 export function TopBar() {
   const router = useRouter();
-  const { user, role, clearAuth } = useAuthStore();
+  const { user, role, clearAuth, hydrateFromCookie } = useAuthStore();
   const [showNotifs, setShowNotifs] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const unreadCount = alertsData.filter((a) => !a.read).length;
+
+  useEffect(() => {
+    hydrateFromCookie();
+  }, [hydrateFromCookie]);
 
   const handleLogout = async () => {
     try {

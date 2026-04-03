@@ -110,7 +110,9 @@ export default function LoginPage() {
       });
 
       setUser(data.user, data.user.role);
-      router.push('/dashboard');
+      router.replace('/dashboard');
+      router.refresh();
+      window.location.assign('/dashboard');
     } catch {
       setError('An unexpected error occurred. Please try again.');
     } finally {
