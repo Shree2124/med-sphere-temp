@@ -16,8 +16,16 @@ const ROUTE_PERMISSIONS: Record<string, Permission> = {
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow login page and public assets
+  // Handle the login page separately
   if (pathname.startsWith('/login')) {
+    const session = await getSessionFromRequest(req);
+    // If user is already logged in, redirect to dashboard
+    if (session) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
+    // Otherwise, allow access to login page
     return NextResponse.next();
   }
 

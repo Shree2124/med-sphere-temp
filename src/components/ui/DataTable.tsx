@@ -1,6 +1,8 @@
 'use client';
 
 import { cn } from './utils';
+import { Button } from './Button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface Column<T> {
   header: string;
@@ -12,12 +14,18 @@ export interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
   onRowClick?: (row: T) => void;
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+  };
 }
 
 export function DataTable<T extends Record<string, unknown>>({
   columns,
   data,
   onRowClick,
+  pagination,
 }: DataTableProps<T>) {
   return (
     <div className="overflow-x-auto">
@@ -52,6 +60,32 @@ export function DataTable<T extends Record<string, unknown>>({
       {data.length === 0 && (
         <div className="text-center py-12 text-gray-400">
           <p className="text-lg">No data found</p>
+        </div>
+      )}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between p-4 border-t border-gray-100">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
+            disabled={pagination.currentPage === 1}
+            icon={ChevronLeft}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-gray-600">
+            Page {pagination.currentPage} of {pagination.totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
+            disabled={pagination.currentPage === pagination.totalPages}
+            icon={ChevronRight}
+            iconPosition="right"
+          >
+            Next
+          </Button>
         </div>
       )}
     </div>

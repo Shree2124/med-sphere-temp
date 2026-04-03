@@ -31,13 +31,27 @@ export default function PatientsPage() {
     updateFilter,
     fetchPatients,
     isLoading,
+    setPage,
   } = usePatientStore();
 
   const [showRegister, setShowRegister] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+  const [registerForm, setRegisterForm] = useState({
+    name: '',
+    phone: '',
+    age: '',
+    gender: '',
+    email: '',
+    bloodGroup: '',
+    idProofType: '',
+    idNumber: '',
+    address: '',
+  });
 
   useEffect(() => {
     fetchPatients();
-  }, [fetchPatients]);
+  }, [fetchPatients, filters, pagination.page]);
 
   const statusVariant = (s: string) => {
     switch (s.toLowerCase()) {
@@ -51,6 +65,58 @@ export default function PatientsPage() {
         return 'neutral';
       default:
         return 'default';
+    }
+  };
+
+  const resetRegisterForm = () => {
+    setRegisterForm({
+      name: '',
+      phone: '',
+      age: '',
+      gender: '',
+      email: '',
+      bloodGroup: '',
+      idProofType: '',
+      idNumber: '',
+      address: '',
+    });
+    setRegisterError(null);
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegisterError(null);
+
+    if (!registerForm.name || !registerForm.phone || !registerForm.age || !registerForm.gender) {
+      setRegisterError('Name, phone, age and gender are required.');
+      return;
+    }
+
+    setIsRegistering(true);
+    try {
+      const res = await fetch('/api/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...registerForm,
+          age: Number(registerForm.age),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setRegisterError(data.message || 'Failed to register patient');
+        return;
+      }
+
+      setShowRegister(false);
+      resetRegisterForm();
+      setPage(1);
+      await fetchPatients();
+    } catch {
+      setRegisterError('Failed to register patient');
+    } finally {
+      setIsRegistering(false);
     }
   };
 
@@ -88,11 +154,10 @@ export default function PatientsPage() {
                 key={s}
                 onClick={() => updateFilter({ status: s })}
                 disabled={isLoading}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all capitalize cursor-pointer ${
-                  filters.status.toLowerCase() === s.toLowerCase()
-                    ? 'bg-brand-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                } ${isLoading ? 'opacity-50' : ''}`}
+                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all capitalize cursor-pointer ${filters.status.toLowerCase() === s.toLowerCase()
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  } ${isLoading ? 'opacity-50' : ''}`}
               >
                 {s === 'all' ? 'All' : s}
               </button>
@@ -106,6 +171,11 @@ export default function PatientsPage() {
         <div className="overflow-x-auto">
           <DataTable
             data={patients as unknown as Record<string, unknown>[]}
+            pagination={{
+              currentPage: pagination.page,
+              totalPages: pagination.totalPages,
+              onPageChange: setPage,
+            }}
             columns={[
               {
                 header: 'Patient ID',
@@ -188,27 +258,72 @@ export default function PatientsPage() {
       {/* Registration Modal */}
       <Modal
         open={showRegister}
-        onClose={() => setShowRegister(false)}
+        onClose={() => {
+          setShowRegister(false);
+          resetRegisterForm();
+        }}
         title="Register New Patient"
         size="lg"
       >
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleRegister}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Full Name" placeholder="Enter patient name" />
-            <Input label="Phone" placeholder="+91 XXXXX XXXXX" />
-            <Input label="Age" type="number" placeholder="Age" />
+            <Input
+              label="Full Name"
+              placeholder="Enter patient name"
+              value={registerForm.name}
+              onChange={(e) =>
+                setRegisterForm((prev) => ({ ...prev, name: e.target.value }))
+              }
+              required
+            />
+            <Input
+              label="Phone"
+              placeholder="+91 XXXXX XXXXX"
+              value={registerForm.phone}
+              onChange={(e) =>
+                setRegisterForm((prev) => ({ ...prev, phone: e.target.value }))
+              }
+              required
+            />
+            <Input
+              label="Age"
+              type="number"
+              placeholder="Age"
+              value={registerForm.age}
+              onChange={(e) =>
+                setRegisterForm((prev) => ({ ...prev, age: e.target.value }))
+              }
+              required
+            />
             <Select
               label="Gender"
+              value={registerForm.gender}
+              onChange={(e) =>
+                setRegisterForm((prev) => ({ ...prev, gender: e.target.value }))
+              }
               options={[
                 { value: '', label: 'Select Gender' },
                 { value: 'Male', label: 'Male' },
                 { value: 'Female', label: 'Female' },
                 { value: 'Other', label: 'Other' },
               ]}
+              required
             />
-            <Input label="Email" type="email" placeholder="patient@email.com" />
+            <Input
+              label="Email"
+              type="email"
+              placeholder="patient@email.com"
+              value={registerForm.email}
+              onChange={(e) =>
+                setRegisterForm((prev) => ({ ...prev, email: e.target.value }))
+              }
+            />
             <Select
               label="Blood Group"
+              value={registerForm.bloodGroup}
+              onChange={(e) =>
+                setRegisterForm((prev) => ({ ...prev, bloodGroup: e.target.value }))
+              }
               options={[
                 { value: '', label: 'Select' },
                 { value: 'A+', label: 'A+' },
@@ -224,10 +339,34 @@ export default function PatientsPage() {
             <Input
               label="ID Proof Type"
               placeholder="Aadhaar / PAN / Passport"
+              value={registerForm.idProofType}
+              onChange={(e) =>
+                setRegisterForm((prev) => ({ ...prev, idProofType: e.target.value }))
+              }
             />
-            <Input label="ID Number" placeholder="Enter ID number" />
+            <Input
+              label="ID Number"
+              placeholder="Enter ID number"
+              value={registerForm.idNumber}
+              onChange={(e) =>
+                setRegisterForm((prev) => ({ ...prev, idNumber: e.target.value }))
+              }
+            />
           </div>
-          <Textarea label="Address" placeholder="Full address" />
+          <Textarea
+            label="Address"
+            placeholder="Full address"
+            value={registerForm.address}
+            onChange={(e) =>
+              setRegisterForm((prev) => ({ ...prev, address: e.target.value }))
+            }
+          />
+
+          {registerError && (
+            <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">
+              {registerError}
+            </div>
+          )}
 
           {/* Duplicate Detection */}
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
@@ -239,10 +378,20 @@ export default function PatientsPage() {
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" onClick={() => setShowRegister(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowRegister(false);
+                resetRegisterForm();
+              }}
+              disabled={isRegistering}
+            >
               Cancel
             </Button>
-            <Button variant="primary">Register Patient</Button>
+            <Button type="submit" variant="primary" disabled={isRegistering}>
+              {isRegistering ? 'Registering...' : 'Register Patient'}
+            </Button>
           </div>
         </form>
       </Modal>

@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { encrypt } from '@/lib/auth';
-import { cookies } from 'next/headers';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -74,17 +73,7 @@ export async function POST(req: NextRequest) {
 
     const token = await encrypt(payload, expires);
 
-    // Set cookie
-    const cookieStore = await cookies();
-    cookieStore.set('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      expires,
-      path: '/',
-    });
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: {
         id: user.id,
@@ -93,6 +82,16 @@ export async function POST(req: NextRequest) {
         name: payload.name,
       },
     });
+
+    response.cookies.set('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      expires,
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(

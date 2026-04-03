@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { patients as mockPatients } from '@/lib/mock-data';
 
 export interface Patient {
   id: string;
@@ -27,6 +26,7 @@ interface PaginationState {
   page: number;
   pageSize: number;
   total: number;
+  totalPages: number;
 }
 
 interface PatientState {
@@ -58,6 +58,7 @@ export const usePatientStore = create<PatientState>()(
       page: 1,
       pageSize: 10,
       total: 0,
+      totalPages: 1,
     },
     isLoading: false,
     error: null,
@@ -99,37 +100,28 @@ export const usePatientStore = create<PatientState>()(
         state.isLoading = true;
       });
 
-      const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
-
       try {
-        if (useMock) {
-          // Simulate API delay
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          set((state) => {
-            state.patients = mockPatients as Patient[];
-            state.pagination.total = mockPatients.length;
-          });
-        } else {
-          const { search, status, department } = get().filters;
-          const { page, pageSize } = get().pagination;
+        const { search, status, department } = get().filters;
+        const { page, pageSize } = get().pagination;
 
-          const params = new URLSearchParams({
-            search,
-            status,
-            department,
-            page: page.toString(),
-            pageSize: pageSize.toString(),
-          });
+        const params = new URLSearchParams({
+          search,
+          status,
+          department,
+          page: page.toString(),
+          pageSize: pageSize.toString(),
+        });
 
-          const res = await fetch(`/api/patients?${params}`);
-          if (!res.ok) throw new Error('Failed to fetch patients');
+        const res = await fetch(`/api/patients?${params}`);
+        if (!res.ok) throw new Error('Failed to fetch patients');
 
-          const data = await res.json();
-          set((state) => {
-            state.patients = data.patients;
-            state.pagination.total = data.total;
-          });
-        }
+        const data = await res.json();
+        set((state) => {
+          state.patients = data.data;
+          state.pagination.total = data.pagination.total;
+          state.pagination.totalPages = data.pagination.totalPages;
+          state.pagination.page = data.pagination.page;
+        });
       } catch (err) {
         set((state) => {
           state.error = (err as Error).message;
